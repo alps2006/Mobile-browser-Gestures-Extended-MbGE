@@ -48,6 +48,7 @@ let gesture = {
     'T→↑': 'Google translate',
     'T←↑': 'YouTube search',
     'T↑↓': 'Query search',
+    'T◆◆': 'Select sentence',
     'I↓↑●': 'Open image source',
     'I→↑●': 'Google image search',
     'V→': 'Forward 5s',
@@ -65,8 +66,7 @@ let gesture = {
     'V→▼': 'Progress',
     'V→▽': 'Release progress',
     'V←▼': 'Regress',
-    'V←▽': 'Release regress',
-    'T◆◆': 'Select sentence'
+    'V←▽': 'Release regress'
 },
     pathFn = {
         'Open settings': '/*ONLY TOP*/openSet();',
@@ -540,7 +540,7 @@ function openSet() {
         '#gestureBox h1{width:60%;height:12vmin;color:#0074d9;background-color:#dee6ef;margin:3vmin auto;border-radius:12vmin;box-shadow:0.9vmin 0.9vmin 3vmin #dfdfdf;}' +
         '#gestureBox #addGesture{width:14vmin;height:14vmin;margin:3vmin auto;line-height:14vmin;background-color:#dee6ef;color:#032e58;font-size:7.5vmin;border-radius:15vmin;box-shadow:0.3vmin 0.3vmin 1.5vmin #dfdfdf;}' +
         '#gestureBox .gestureLi{height:18vmin;width:100%;border-bottom:0.3vmin solid #dfdfdf;}' +
-        '#gestureBox .gestureLi p{margin:3vmin 0 0 1%;width:38%;height:12vmin;border-left:1.8vmin solid;color:#ffb400;background-color:#fff1cf;float:left;white-space:nowrap;text-overflow:ellipsis;text-shadow:0.3vmin 0.3vmin 3vmin #ffcb56;}' +
+        '#gestureBox .gestureLi p{margin:3vmin 0 0 1%;width:38%;height:12vmin;border-left:1.8vmin solid;color:#000000;background-color:#dfdfdf;float:left;white-space:nowrap;text-overflow:ellipsis;text-shadow:0.3vmin 0.3vmin 3vmin #fff;}' +
         '#gestureBox .gestureLi .gesturePath{margin:3vmin 0 0 3%;float:left;width:38%;height:12vmin;background-color:#f3f3f3;color:#000;box-shadow:0.3vmin 0.3vmin 1.5vmin #ccc9c9;border-radius:3vmin;white-space:nowrap;text-overflow:ellipsis;}' +
         '#gestureBox .gestureLi .delGesture{margin:3vmin 2% 0 0;width:15vmin;height:12vmin;float:right;color:#f00;text-decoration:line-through;}' +
         '#gestureBox #revisePath{background-color:rgba(0,0,0,0.7);width:100%;height:100%;position:fixed;inset:0;display:none;color:#000;}' +
