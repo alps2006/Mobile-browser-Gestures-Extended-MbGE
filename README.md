@@ -34,6 +34,7 @@ VERSIONS
   <tr>
     <td>Custom Modifications include:
       <ul>
+        <li>Adding Sentence selection</li>
         <li>Changing New page from Limestart.cn to Chrome://newtab</li>
         <li>Changing Baidu translate to Google translate(Text gesture)</li>
         <li>Changing Youdao translate to Youtube search(Text gesture)</li>
@@ -240,8 +241,12 @@ Gesture Icon Legend:
     <td>YouTube search</td>
   </tr>
   <tr>
-    <td>T◆◆</td>
+    <td>T↑↓</td>
     <td>Query search</td>
+  </tr>
+  <tr>
+    <td>T◆◆</td>
+    <td>Sentence selection</td>
   </tr>
   <tr>
     <td>I↓↑●</td>

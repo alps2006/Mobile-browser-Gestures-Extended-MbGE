@@ -47,7 +47,7 @@ let gesture = {
     '→←→': 'Half screen mode',
     'T→↑': 'Google translate',
     'T←↑': 'YouTube search',
-    'T◆◆': 'Query search',
+    'T↑↓': 'Query search',
     'I↓↑●': 'Open image source',
     'I→↑●': 'Google image search',
     'V→': 'Forward 5s',
@@ -65,7 +65,8 @@ let gesture = {
     'V→▼': 'Progress',
     'V→▽': 'Release progress',
     'V←▼': 'Regress',
-    'V←▽': 'Release regress'
+    'V←▽': 'Release regress',
+    'T◆◆': 'Select sentence'
 },
     pathFn = {
         'Open settings': '/*ONLY TOP*/openSet();',
@@ -103,7 +104,8 @@ let gesture = {
         'Progress': 'let lastX=gestureData.touchEnd.screenX,rem=videoPlayer.currentTime/60,mod=videoPlayer.currentTime%60;gestureData.tipBox.innerHTML=((rem<10) ? "0" : "")+(rem|0)+" : "+((mod<10) ? "0" : "")+(mod|0);gestureData.tipBox.style.display="block";gestureData.videoTimer=setInterval(()=>{if(gestureData.touchEnd.screenX-lastX){videoPlayer.currentTime+=(gestureData.touchEnd.screenX-lastX)*(1+Math.abs(gestureData.touchEnd.screenX-lastX)/20);lastX=gestureData.touchEnd.screenX;}rem=videoPlayer.currentTime/60;mod=videoPlayer.currentTime%60;gestureData.tipBox.innerHTML=((rem<10) ? "0" : "")+(rem|0)+" : "+((mod<10) ? "0" : "")+(mod|0);},50);',
         'Release progress': 'clearInterval(gestureData.videoTimer);gestureData.tipBox.style.display="none";',
         'Regress': 'let lastX=gestureData.touchEnd.screenX,rem=videoPlayer.currentTime/60,mod=videoPlayer.currentTime%60;gestureData.tipBox.innerHTML=((rem<10) ? "0" : "")+(rem|0)+" : "+((mod<10) ? "0" : "")+(mod|0);gestureData.tipBox.style.display="block";gestureData.videoTimer=setInterval(()=>{if(gestureData.touchEnd.screenX-lastX){videoPlayer.currentTime+=(gestureData.touchEnd.screenX-lastX)*(1+Math.abs(gestureData.touchEnd.screenX-lastX)/20);lastX=gestureData.touchEnd.screenX;}rem=videoPlayer.currentTime/60;mod=videoPlayer.currentTime%60;gestureData.tipBox.innerHTML=((rem<10) ? "0" : "")+(rem|0)+" : "+((mod<10) ? "0" : "")+(mod|0);},50);',
-        'Release regress': 'clearInterval(gestureData.videoTimer);gestureData.tipBox.style.display="none";'
+        'Release regress': 'clearInterval(gestureData.videoTimer);gestureData.tipBox.style.display="none";',
+        'Select sentence': 'const sel = selectionStore.restoreSelection();sel.modify("extend", "backward", "sentence");sel.collapseToStart();sel.modify("extend", "forward", "sentence");document.dispatchEvent(new Event("contextmenu", {bubbles: true, cancelable: true}));'
     },
     settings = {
         'Sliding coefficient': [0.2, 0, 0.5, 2],//[current value, minimum value, maximum value, value precision]
@@ -506,6 +508,27 @@ function copyTouch(oldObj) {
     }
     return newObj;
 }
+
+// store and restore selection
+var selectionStore = {
+    range: null,
+    saveSelection() {
+        const sel = window.getSelection();
+        if (sel.rangeCount > 0) {
+            this.range = sel.getRangeAt(0);
+        }
+    },
+
+    restoreSelection() {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        if (this.range) {
+            sel.addRange(this.range);
+        }
+        return sel;
+    },
+};
+
 //Gesture function setting ui
 function openSet() {
     let gestureName = '', gesturePath = '', gestureBox = document.createElement('div'), pathEle = null, _clickTimer = 0;
@@ -836,7 +859,7 @@ function regEvent() {
     window.addEventListener('touchmove', touchMove, { capture: true, passive: true });
     window.addEventListener('touchend', touchEnd, { capture: true, passive: false });
     window.addEventListener('touchcancel', touchEnd, { capture: true, passive: false });
-    window.addEventListener('contextmenu', (e) => { if (path.indexOf("I") > -1) { e.preventDefault(); } }, true);//Disable the popup menu when long pressing the image
+    window.addEventListener('contextmenu', (e) => { selectionStore.saveSelection(); if (path.indexOf("I") > -1) { e.preventDefault(); } }, true);//Disable the popup menu when long pressing the image
     if (settings['Avoid breaking touch']) { window.addEventListener('click', delayClick, true); }
 }
 regEvent();
