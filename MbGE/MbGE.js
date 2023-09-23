@@ -3,7 +3,7 @@
 // @name:en Mobile browser Gestures Extended (MbGE)
 // @description Add touch gesture functions to mobile browsers, such as ↓↑back to top, ↑↓back to bottom, →←back, ←→forward, →↓close tab, →↑restore the page just closed, etc. There are text gestures, image gestures, video gestures and more. You can also customize your gestures. Kiwi browser, Yandex browser and Lemur browser are recommended.
 // @description:en	Add touch gestures to mobile browsers. For example, ↓↑: go to the top, ↑↓: go to the bottom, →←: go back, ←→: go forward, →↓: closes the tab, →↑: restores just closed page, etc. There are more functions such as text gestures, image gestures and video gestures. You can also customize your gestures. Recommend using Kiwi browser, Yandex browser and Lemur Browser.
-// @version		9.0.9
+// @version		9.0.10
 // @author		L.Xavier
 // @namespace	https://greasyfork.org/zh-CN/users/128493
 // @match		*://*/*
@@ -16,6 +16,7 @@
 // @grant GM_addValueChangeListener
 // @run-at document-start
 // ==/UserScript==
+// v9.0.10 2023-09-04 -1. Fix the problem that analyzing site. 2. improve search method of video container.
 // v9.0.9 2023-04-10 -Fix the problem that the gesture will be triggered after sliding with two fingers
 // ***********************************************************************
 // English translations + Custom modifications made by Crunchbits https://github.com/Crunchbits
@@ -26,7 +27,6 @@
 // - Changing Query search from Bing search to Google search(Text gesture)
 // - Changing Baidu image search to Google image search(Image gesture)
 // - Changing Video forward/backward 10 seconds to Video forward/backward 5 seconds(Video gesture)
-// - Removed Analyze video function that opened videos in https://jx.jsonplayer.com/player as it didn't work to begin with and I had no use for it.
 // ***********************************************************************
 /*Gesture Data Module*/
 let gesture = {
@@ -45,6 +45,7 @@ let gesture = {
     '↑↓●': 'Hide element',
     '↓→': 'Duplicate page',
     '→←→': 'Half screen mode',
+    '→↓↑←':'Analyze video',
     'T→↑': 'Google translate',
     'T←↑': 'YouTube search',
     'T↑↓': 'Query search',
@@ -81,9 +82,10 @@ let gesture = {
         'Close page': '/*ONLY TOP*/window.close();',
         'Restore page': '/*ONLY TOP*/GM_openInTab("chrome-native://recent-tabs");',
         'Open in new page': 'let linkNode=gestureData.touchEle;while(true){if(linkNode.href){GM_openInTab(linkNode.href);break;}linkNode=linkNode.parentNode;if(linkNode.nodeName==="BODY"){gestureData.touchEle.click();break;}}',
-        'Hide element': 'let boxNode=gestureData.touchEle,area=boxNode.offsetWidth*boxNode.offsetHeight,area_p=boxNode.parentNode.offsetWidth*boxNode.parentNode.offsetHeight,area_s=screen.width*screen.height;while(boxNode.nodeName!=="BODY" && area/area_p>0.2 && area_p/area_s<0.9){boxNode=boxNode.parentNode;area_p=boxNode.parentNode.offsetWidth*boxNode.parentNode.offsetHeight;}if(boxNode.nodeName!=="HTML"){boxNode.remove();}',
+        'Hide element': 'let boxNode=gestureData.touchEle,area=boxNode.offsetWidth*boxNode.offsetHeight,area_p=boxNode.parentNode.offsetWidth*boxNode.parentNode.offsetHeight,area_s=screen.width*screen.height;while(boxNode.parentNode.nodeName!=="BODY" && area/area_p>0.2 && area_p/area_s<0.9){boxNode=boxNode.parentNode;area_p=boxNode.parentNode.offsetWidth*boxNode.parentNode.offsetHeight;}if(boxNode.nodeName!=="HTML"){boxNode.remove();}',
         'Duplicate page': '/*ONLY TOP*/GM_openInTab(location.href);',
         'Half screen mode': '/*ONLY TOP*/if(gestureData.halfScreen){setTimeout(()=>{gestureData.halfScreen.remove();halfClose.remove();gestureData.halfScreen=null;document.documentElement.scrollTop=gestureData.scrollTop;},500);gestureData.scrollTop=document.body.scrollTop;let halfClose=addStyle("html{transform:translateY(0) !important;}");}else{gestureData.scrollTop=document.documentElement.scrollTop;gestureData.halfScreen=addStyle("html,body{height:43vh !important;overflow-y:auto !important;}html{transform:translateY(50vh) !important;transition:0.5s !important;overflow:hidden !important;}");document.body.scrollTop=gestureData.scrollTop;}',
+        'Analyze video': '/*ONLY TOP*/GM_openInTab("http://jx.bozrc.com:4433/player/?url="+location.href);',
         'Google translate': 'GM_openInTab("//translate.google.com/#auto/en/"+encodeURIComponent(gestureData.selectWords));',
         'YouTube search': 'GM_openInTab("//www.youtube.com/results?search_query="+encodeURIComponent(gestureData.selectWords));',
         'Query search': 'GM_setClipboard(gestureData.selectWords);let regURL=/^((https?:)?\\/\\/)?([\\w\\-]+\\.)+\\w{2,4}(\\/\\S*)?$/;if(!regURL.test(gestureData.selectWords.trim())){gestureData.selectWords="//google.com/search?q="+encodeURIComponent(gestureData.selectWords);}else if(!/^(https?:)?\\/\\//.test(gestureData.selectWords.trim())){gestureData.selectWords="//"+gestureData.selectWords.trim();}GM_openInTab(gestureData.selectWords.trim());',
@@ -331,7 +333,16 @@ function findVideoBox(player = videoPlayer) {
     }
     childWidth = (childWidth > _childWidth) ? childWidth : _childWidth;
     childHeight = (childHeight > _childHeight) ? childHeight : _childHeight;
-    while (childWidth >= parentEle.clientWidth && childHeight >= parentEle.clientHeight && parentEle.nodeName != 'BODY') {
+    while(childWidth>=parentEle.clientWidth && parentEle.nodeName!='BODY'){
+        if(childHeight<parentEle.clientHeight){
+            let isBreak=1;
+            for(let childEle of parentEle.children){
+                childStyle=getComputedStyle(childEle);
+                _childHeight=Math.round(childEle.offsetHeight+(+childStyle.top.slice(0,-2) || 0)+(+childStyle.marginTop.slice(0,-2))+(+childStyle.marginBottom.slice(0,-2))+(+childStyle.bottom.slice(0,-2) || 0));
+                if(_childHeight===parentEle.clientHeight){isBreak=0;break;}
+            }
+            if(isBreak){break;}
+        }
         player._videoBox_.setAttribute('_videobox_', ''); player._videoBox_ = parentEle;
         childStyle = getComputedStyle(parentEle);
         if (parentEle.offsetParent === parentEle.parentNode) {
