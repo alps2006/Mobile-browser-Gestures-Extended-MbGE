@@ -3,7 +3,7 @@
 // @name:en Mobile browser Gestures Extended (MbGE)
 // @description Add touch gesture functions to mobile browsers, such as ↓↑back to top, ↑↓back to bottom, →←back, ←→forward, →↓close tab, →↑restore the page just closed, etc. There are text gestures, image gestures, video gestures and more. You can also customize your gestures. Kiwi browser, Yandex browser and Lemur browser are recommended.
 // @description:en	Add touch gestures to mobile browsers. For example, ↓↑: go to the top, ↑↓: go to the bottom, →←: go back, ←→: go forward, →↓: closes the tab, →↑: restores just closed page, etc. There are more functions such as text gestures, image gestures and video gestures. You can also customize your gestures. Recommend using Kiwi browser, Yandex browser and Lemur Browser.
-// @version		9.0.10
+// @version		9.0.11
 // @author		L.Xavier
 // @namespace	https://greasyfork.org/zh-CN/users/128493
 // @match		*://*/*
@@ -16,6 +16,7 @@
 // @grant GM_addValueChangeListener
 // @run-at document-start
 // ==/UserScript==
+// v9.0.11 2023-09-19 -1. Fix the problem that QQ mail don't work. 2. avoid redundant element of video container.
 // v9.0.10 2023-09-04 -1. Fix the problem that analyzing site. 2. improve search method of video container.
 // v9.0.9 2023-04-10 -Fix the problem that the gesture will be triggered after sliding with two fingers
 // ***********************************************************************
@@ -317,7 +318,7 @@ async function videoFullScreen() {
 //Get video full screen style container
 function findVideoBox(player = videoPlayer) {
     if (!document.contains(player)) { return null; }
-    if (player._videoBox_?.contains(player)) { return player._videoBox_; }
+    if(player._videoBox_?.contains(player) && (document.fullscreen || player._boxHeight_>=player._videoBox_.clientHeight)){return player._videoBox_;}
     player._videoBox_ = player.parentNode; player.setAttribute('_videobox_', '');
     let parentEle = player._videoBox_.parentNode, videoStyle = getComputedStyle(player), childStyle = getComputedStyle(player._videoBox_), childWidth = 0, childHeight = 0, _childWidth = 0, _childHeight = 0;
     if (player._videoBox_.offsetParent === parentEle) {
@@ -337,13 +338,14 @@ function findVideoBox(player = videoPlayer) {
         if(childHeight<parentEle.clientHeight){
             let isBreak=1;
             for(let childEle of parentEle.children){
-                childStyle=getComputedStyle(childEle);
-                _childHeight=Math.round(childEle.offsetHeight+(+childStyle.top.slice(0,-2) || 0)+(+childStyle.marginTop.slice(0,-2))+(+childStyle.marginBottom.slice(0,-2))+(+childStyle.bottom.slice(0,-2) || 0));
+                childHeight=Math.round(childEle.offsetHeight+(+childStyle.top.slice(0,-2) || 0)+(+childStyle.marginTop.slice(0,-2))+(+childStyle.marginBottom.slice(0,-2))+(+childStyle.bottom.slice(0,-2) || 0));
+                if(childHeight===parentEle.clientHeight){isBreak=0;break;}
                 if(_childHeight===parentEle.clientHeight){isBreak=0;break;}
             }
             if(isBreak){break;}
         }
-        player._videoBox_.setAttribute('_videobox_', ''); player._videoBox_ = parentEle;
+        player._videoBox_.setAttribute('_videobox_','');
+        player._videoBox_=parentEle;player._boxHeight_=childHeight;
         childStyle = getComputedStyle(parentEle);
         if (parentEle.offsetParent === parentEle.parentNode) {
             _childWidth = Math.round(parentEle.offsetWidth + (+childStyle.marginLeft.slice(0, -2)) + (+childStyle.marginRight.slice(0, -2)));
@@ -455,9 +457,6 @@ if (settings['Video download']) {
 let iframeEle = document.getElementsByTagName('iframe'), checkTimer = 0;
 //Modify the trusted types policy
 window.trustedTypes?.createPolicy('default', { createHTML: string => string, createScript: string => string, createScriptURL: string => string });
-//Register for events when the page is rewritten
-document._docWrite_ = document.write;
-document.write = (content) => { document._docWrite_(content); if (getComputedStyle(document.documentElement).userSelect !== 'text') { regEvent(); } }
 //set shadow-root (open)
 Element.prototype.attachShadow = function () {
     if (!window._shadowList_) { window._shadowList_ = []; }
@@ -484,7 +483,7 @@ async function loadCheck() {
             gestureData.tipBox.style.cssText = 'width:100px;height:50px;position:absolute;text-align:center;top:calc(50% - 25px);left:calc(50% - 50px);display:none;color:#1e87f0;font-size:22px;line-height:50px;background-color:rgba(0,0,0,0.6);border-radius:20px;font-family:system-ui;z-index:2147483647;';
         }
         for (let Ti = 0, len = videoEle.length; Ti < len; ++Ti) {
-            if (!videoEle[Ti]._videoBox_ && videoEle[Ti].offsetHeight) {
+            if (!videoEle[Ti]._videoBox_) {
                 await findVideoBox(videoEle[Ti]);
                 if (settings['Video download']) { await window._initDownload_(videoEle[Ti]); }
                 if (!videoEle[Ti].paused) { setVideo(videoEle[Ti]); }
@@ -496,11 +495,13 @@ async function loadCheck() {
     for (let Ti = 0, len = iframeEle.length; Ti < len; ++Ti) {
         if (!iframeEle[Ti].allowFullscreen) {
             iframeEle[Ti].allowFullscreen = true;
-            if (iframeEle[Ti].getAttribute('src') && iframeEle[Ti].src.indexOf('chrome-extension://')) {
+            if(iframeEle[Ti].getAttribute('src') && /^((https?:)?\/\/)?([\w\-]+\.)+\w{2,4}(\/\S*)?$/.test(iframeEle[Ti].src)){
                 iframeEle[Ti].src = iframeEle[Ti].src;
             }
         }
     }
+    //Register for events when the page is rewritten
+    if(getComputedStyle(document.documentElement).userSelect!=='text'){regEvent();}
     checkTimer = 0;
 }
 //add stylesheet
@@ -862,9 +863,6 @@ function regEvent() {
     }
     //Uncheck restriction
     addStyle('*{user-select:text !important;touch-action:manipulation;}');
-    //load detection
-    checkTimer = setTimeout(loadCheck, 200);
-    observer.observe(document, { childList: true, subtree: true });
     //Gesture event registration
     window.addEventListener('touchstart', touchStart, { capture: true, passive: false });
     window.addEventListener('touchmove', touchMove, { capture: true, passive: true });
@@ -872,5 +870,8 @@ function regEvent() {
     window.addEventListener('touchcancel', touchEnd, { capture: true, passive: false });
     window.addEventListener('contextmenu', (e) => { selectionStore.saveSelection(); if (path.indexOf("I") > -1) { e.preventDefault(); } }, true);//Disable the popup menu when long pressing the image
     if (settings['Avoid breaking touch']) { window.addEventListener('click', delayClick, true); }
-}
+} 
 regEvent();
+//load detection
+checkTimer = setTimeout(loadCheck, 200);
+observer.observe(document, { childList: true, subtree: true });
